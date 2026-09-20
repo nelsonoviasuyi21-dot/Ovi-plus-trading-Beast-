@@ -1,79 +1,38 @@
 name: Build Ovi Plus Trading Beast APK
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
+on: {push: {branches: [main]}, workflow_dispatch: {}}
+permissions: {contents: read}
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Prepare Android SDK
-        shell: bash
-        run: |
-          set -e
-
-          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
-
-          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
-
-          if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER=$(find "$ANDROID_SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -n 1)
-          fi
-
-          echo "Using sdkmanager: $SDKMANAGER"
-
-          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-
-          "$SDKMANAGER" \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
-
-      - name: Set up Gradle 8.10
-        uses: gradle/actions/setup-gradle@v6
-        with:
-          gradle-version: '8.10'
-
-      - name: Build APK
-        run: |
-          gradle assembleDebug --no-daemon --stacktrace
-
-      - name: Find and prepare APK
-        shell: bash
-        run: |
-          set -e
-
-          APK=$(find . -type f \
-            -path "*/build/outputs/apk/debug/*.apk" \
-            | head -n 1)
-
-          if [ -z "$APK" ]; then
-            echo "ERROR: No APK was produced."
-            find . -type f -name "*.apk" -print
-            exit 1
-          fi
-
-          echo "APK found: $APK"
-
-          mkdir -p output
-          cp "$APK" output/Ovi-Plus-Trading-Beast-ADVANCED.apk
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Ovi-Plus-Trading-Beast-ADVANCED
-          path: output/Ovi-Plus-Trading-Beast-ADVANCED.apk
-          if-no-files-found: error
+ build:
+  runs-on: ubuntu-latest
+  steps:
+  - uses: actions/checkout@v4
+  - uses: actions/setup-java@v5
+    with: {distribution: temurin, java-version: '17'}
+  - name: Android SDK
+    shell: bash
+    run: |
+      set -e
+      export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+      SDKMANAGER=$(find "$ANDROID_SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -n 1)
+      test -n "$SDKMANAGER"
+      yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+      "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+  - uses: gradle/actions/setup-gradle@v6
+    with: {gradle-version: '8.10'}
+  - name: Build and verify
+    run: |
+      set -e
+      gradle :app:assembleDebug --no-daemon --stacktrace
+      APK=app/build/outputs/apk/debug/app-debug.apk
+      test -s "$APK"
+      SIZE=$(stat -c%s "$APK")
+      echo "APK_BYTES=$SIZE"
+      test "$SIZE" -gt 200000
+      mkdir -p output
+      cp "$APK" output/Ovi-Plus-Trading-Beast-ADVANCED.apk
+      unzip -l "$APK" | head -60
+  - uses: actions/upload-artifact@v4
+    with:
+      name: Ovi-Plus-Trading-Beast-ADVANCED
+      path: output/Ovi-Plus-Trading-Beast-ADVANCED.apk
+      if-no-files-found: error
