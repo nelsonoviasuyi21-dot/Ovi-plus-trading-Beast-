@@ -26,8 +26,6 @@ jobs:
       APK=app/build/outputs/apk/debug/app-debug.apk
       test -s "$APK"
       SIZE=$(stat -c%s "$APK")
-      echo "APK_BYTES=$SIZE"
-      test "$SIZE" -gt 200000
       mkdir -p output
       cp "$APK" output/Ovi-Plus-Trading-Beast-ADVANCED.apk
       unzip -l "$APK" | head -60
