@@ -10,44 +10,70 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install required Android SDK packages
+      - name: Prepare Android SDK
+        shell: bash
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          set -e
+
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -n 1)
+          fi
+
+          echo "Using sdkmanager: $SDKMANAGER"
+
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+      - name: Set up Gradle 8.10
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.10'
 
       - name: Build APK
         run: |
-          chmod +x gradlew 2>/dev/null || true
-          if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --no-daemon
-          else
-            gradle assembleDebug --no-daemon
-          fi
+          gradle assembleDebug --no-daemon --stacktrace
 
-      - name: Rename APK
+      - name: Find and prepare APK
+        shell: bash
         run: |
-          mkdir -p output
-          APK=$(find . -type f -path "*/build/outputs/apk/debug/*.apk" | head -n 1)
+          set -e
+
+          APK=$(find . -type f \
+            -path "*/build/outputs/apk/debug/*.apk" \
+            | head -n 1)
+
           if [ -z "$APK" ]; then
-            echo "APK was not produced"
+            echo "ERROR: No APK was produced."
+            find . -type f -name "*.apk" -print
             exit 1
           fi
+
+          echo "APK found: $APK"
+
+          mkdir -p output
           cp "$APK" output/Ovi-Plus-Trading-Beast-ADVANCED.apk
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Ovi-Plus-Trading-Beast-ADVANCED
           path: output/Ovi-Plus-Trading-Beast-ADVANCED.apk
+          if-no-files-found: error
