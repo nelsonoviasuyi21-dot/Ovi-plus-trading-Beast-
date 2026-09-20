@@ -1,0 +1,29 @@
+OVI PLUS TRADING BEAST
+ADVANCED ANDROID BUILD
+
+Version: 10.0
+
+Minimum Android: 6.0 / API 23
+Target Android: API 35
+
+Cloud:
+https://ovi-plus-trading-beast.onrender.com
+
+Scanner:
+Minimum score = 55/100
+Minimum buyer strength = 70%
+
+Mode:
+Paper trading
+
+Entry policy:
+One entry / no re-entry
+
+Live activity:
+Enabled
+
+Cloud polling:
+10 seconds
+
+Build:
+GitHub Actions

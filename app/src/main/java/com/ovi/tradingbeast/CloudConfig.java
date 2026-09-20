@@ -1,0 +1,15 @@
+package com.ovi.tradingbeast;
+
+public final class CloudConfig {
+
+    private CloudConfig() {}
+
+    public static final String BASE_URL =
+            "https://ovi-plus-trading-beast.onrender.com";
+
+    public static final long POLL_MS = 10000L;
+
+    public static final double MIN_SCORE = 55.0;
+
+    public static final double MIN_BUYER_STRENGTH = 70.0;
+}
